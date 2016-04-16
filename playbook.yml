@@ -1,0 +1,114 @@
+---
+- hosts: all
+  user: ubuntu
+  become: yes
+  vars_files:
+    - vars_main.yml
+    - vars_secret.yml
+  tasks:
+
+    # common
+    - name: apt-get update
+      apt: update_cache=yes cache_valid_time=36000
+
+    - name: install common libraries
+      apt: name={{ item }} state=present
+      with_items:
+        - git-core
+        - htop
+        - build-essential
+        - tree
+
+    # LAMP stack
+    - name: install LAMP stack
+      apt: name={{ item }} state=present
+      with_items:
+        # A
+        - apache2
+        # M
+        - mysql-server
+        # P
+        - php5
+        - libapache2-mod-php5
+        - php5-mcrypt
+        - php5-mysql
+        - php5-gd
+        - libssh2-php
+
+    # mysql config
+    - name: install mysql python wrapper
+      apt: name={{ item }} state=present
+      with_items:
+        - python-mysqldb
+
+    - name: set mysql root password
+      mysql_user: name=root host=localhost password={{ mysql.root_password }}
+
+    - name: set .my.cnf
+      template: src=templates/.my.cnf.j2 dest={{ item }}
+      with_items:
+        - /root/.my.cnf
+        - /home/ubuntu/.my.cnf
+
+    - name: create wordpress db
+      mysql_db: name={{ mysql.wordpress.dbname }} state=present config_file=/home/ubuntu/.my.cnf
+
+    - name: create wordpress db user
+      mysql_user: name={{ mysql.wordpress.username }} host=localhost password={{ mysql.wordpress.password }} priv={{ mysql.wordpress.dbname }}.*:ALL config_file=/home/ubuntu/.my.cnf
+
+    # install wordpress
+    - name: download wordpress source
+      unarchive: src={{ wordpress_download_url }} dest=/home/ubuntu copy=no
+                 group=www-data owner=www-data
+                 creates=/home/ubuntu/wordpress
+
+    - name: set wp-config.php
+      template: src=templates/wp-config.php.j2 dest=/home/ubuntu/wordpress/wp-config.php
+
+    # setup apache
+    - name: set apache config
+      template: src=templates/wordpress.conf.j2
+                dest=/etc/apache2/sites-available/wordpress.conf
+      notify:
+        - enable apache config
+        - restart apache
+
+    # backup mysql and wordpress uploaded images
+    - name: install system depenencies for backup
+      apt: name={{ item }} state=present
+      with_items:
+        - ruby
+        - ruby-all-dev
+        - zlib1g-dev
+        - g++
+
+    - name: install backup gem
+      gem: name=backup version=4.1.10 state=present user_install=no
+
+    - name: initialize backup
+      command: backup generate:model -t wordpress_backup
+      args:
+        creates: /root/Backup/models/wordpress_backup.rb
+
+    - name: set backup script
+      template:
+        src: templates/wordpress_backup.rb.j2
+        dest: /root/Backup/models/wordpress_backup.rb
+
+    - name: set cron job
+      cron: name="run backup" minute=0 hour=0 weekday=2
+            job="backup perform -t wordpress_backup"
+
+  handlers:
+
+    - name: enable apache config
+      shell: >
+             a2dissite 000-default.conf &&
+             a2ensite wordpress.conf &&
+             a2enmod rewrite &&
+             ln -sf /home/ubuntu/wordpress /var/www/wordpress
+      args:
+        executable: /bin/bash
+
+    - name: restart apache
+      service: name=apache2 state=restarted

@@ -1,0 +1,38 @@
+Model.new(:wordpress_backup, 'wordpress backup') do
+
+  archive :uploads do |archive|
+    archive.use_sudo
+    archive.add '{{ backup.archive_path }}'
+  end
+
+  database MySQL do |db|
+    db.name           = '{{ mysql.wordpress.dbname }}'
+    db.username       = '{{ mysql.wordpress.username }}'
+    db.password       = '{{ mysql.wordpress.password }}'
+    db.host           = 'localhost'
+    db.port           = 3306
+    db.sudo_user      = 'root'
+  end
+
+  compress_with Gzip
+  store_with S3 do |s3|
+    s3.access_key_id = '{{ backup.s3.id }}'
+    s3.secret_access_key = '{{ backup.s3.secret }}'
+    s3.region = '{{ backup.s3.region }}'
+    s3.bucket = '{{ backup.s3.bucket }}'
+    s3.path = '/'
+  end
+
+  notify_by Mail do |mail|
+    mail.on_success           = true
+    mail.on_warning           = true
+    mail.on_failure           = true
+
+    mail.from                 = '{{ backup.mail.from }}'
+    mail.to                   = '{{ backup.mail.to }}'
+    mail.address              = '{{ backup.mail.address }}'
+    mail.domain               = '{{ backup.mail.domain }}'
+    mail.user_name            = '{{ backup.mail.user_name }}'
+    mail.password             = '{{ backup.mail.password }}'
+  end
+end
