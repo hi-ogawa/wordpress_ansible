@@ -50,6 +50,14 @@
         - /root/.my.cnf
         - /home/ubuntu/.my.cnf
 
+    - name: set my.cnf
+      template: src=templates/my.cnf.j2 dest=/etc/mysql/my.cnf
+      vars:
+        max_connections: 5
+        thread_cache_size: 1
+      notify:
+        - restart mysql
+
     - name: create wordpress db
       mysql_db: name={{ mysql.wordpress.dbname }} state=present config_file=/home/ubuntu/.my.cnf
 
@@ -121,3 +129,6 @@
 
     - name: restart apache
       service: name=apache2 state=restarted
+
+    - name: restart mysql
+      service: name=mysql state=restarted
