@@ -73,6 +73,12 @@
         - enable apache config
         - restart apache
 
+    - name: set apache mpm_prefork config
+      template: src=templates/mpm_prefork.conf.j2
+                dest=/etc/apache2/mods-available/mpm_prefork.conf
+      notify:
+        - restart apache
+
     # backup mysql and wordpress uploaded images
     - name: install system depenencies for backup
       apt: name={{ item }} state=present
