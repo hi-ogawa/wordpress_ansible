@@ -87,35 +87,6 @@
       notify:
         - restart apache
 
-    # backup mysql and wordpress uploaded images
-    - name: install system depenencies for backup
-      apt: name={{ item }} state=present
-      with_items:
-        - ruby
-        - ruby-all-dev
-        - zlib1g-dev
-        - g++
-
-    - name: install backup gem
-      gem: name=backup version=4.1.10 state=present user_install=no
-
-    - name: initialize backup
-      command: backup generate:model -t wordpress_backup
-      become: yes
-      become_user: ubuntu
-      args:
-        creates: /home/ubuntu/Backup/models/wordpress_backup.rb
-
-    - name: set backup script
-      template:
-        src: templates/wordpress_backup.rb.j2
-        dest: /home/ubuntu/Backup/models/wordpress_backup.rb
-
-    - name: set cron job
-      cron: name="run backup" minute=0 hour=1 weekday=0
-            job="/usr/local/bin/backup perform -c /home/ubuntu/Backup/config.rb -t wordpress_backup >> /home/ubuntu/backup.cron.log 2>&1"
-            user=ubuntu
-
   handlers:
 
     - name: enable apache config
