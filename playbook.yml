@@ -84,6 +84,11 @@
     - name: set apache mpm_prefork config
       template: src=templates/mpm_prefork.conf.j2
                 dest=/etc/apache2/mods-available/mpm_prefork.conf
+      vars:
+        start_servers: 5
+        min_spare_servers: 5
+        max_spare_servers: 10
+        max_request_workers: 30
       notify:
         - restart apache
 
