@@ -53,8 +53,8 @@
     - name: set my.cnf
       template: src=templates/my.cnf.j2 dest=/etc/mysql/my.cnf
       vars:
-        max_connections: 5
-        thread_cache_size: 1
+        max_connections: 100
+        thread_cache_size: 8
       notify:
         - restart mysql
 
