@@ -18,6 +18,8 @@
         - htop
         - build-essential
         - tree
+        - iftop
+        - nethogs
 
     # LAMP stack
     - name: install LAMP stack
