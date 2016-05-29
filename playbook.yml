@@ -20,6 +20,8 @@
         - tree
         - iftop
         - nethogs
+        - curl
+        - php5-curl
 
     # LAMP stack
     - name: install LAMP stack
